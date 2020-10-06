@@ -85,7 +85,7 @@ class Webcam:
         }
         return notation[color]
 
-    def scan(self):
+    def scan(self, colorFlag=False):
         """
         Open up the webcam and scans the 9 regions in the center
         and show a preview in the left upper corner.
@@ -108,6 +108,11 @@ class Webcam:
             _, frame = self.cam.read()
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             key = cv2.waitKey(10) & 0xff
+
+            if colorFlag:
+                colorFlag = False
+                faces_avg_hsv = self.define_colors()
+                print(faces_avg_hsv)
 
             # init certain stickers.
             self.draw_main_stickers(frame)
@@ -144,5 +149,60 @@ class Webcam:
         self.cam.release()
         cv2.destroyAllWindows()
         return sides if len(sides) == 6 else False
+
+
+    def define_colors(self):
+        """
+        Scan the center of each face to determine the HSV range of each color.
+        Returns the average hsv scanned for each color.
+        """
+
+        preview = ['white','white','white',
+                   'white','white','white',
+                   'white','white','white']
+        faces = ["GREEN", "RED", "BLUE",
+                 "ORANGE", "YELLOW", "WHITE"]
+        face_index = 0
+        current_stickers = [self.stickers[4]]
+        print("Current Stickers:", current_stickers)
+        faces_avg_hsv = {}
+
+        while True:
+            _, frame = self.cam.read()
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            key = cv2.waitKey(10) & 0xff
+
+            # init certain stickers.
+            self.draw_main_stickers(frame)
+
+            x,y = current_stickers[0]
+            roi = hsv[y:y+32, x:x+32]
+            avg_hsv = ColorDetector.average_hsv(roi)
+            text = "Scan {} face".format(faces[face_index])
+            cv2.putText(frame, text, (20, 460), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+
+            # update when space bar is pressed.
+            if key == 32:
+                face = faces[face_index]
+                faces_avg_hsv[face] = avg_hsv
+                face_index += 1
+
+            # show the new stickers
+            # self.draw_current_stickers(frame, state)
+
+            # quit on escape.
+            if key == 27:
+                break
+
+            # quit when all faces have been scanned
+            elif face_index == 6:
+                face_index = 0
+                break
+
+            # show result
+            cv2.imshow("default", frame)
+
+        return faces_avg_hsv
+
 
 webcam = Webcam()

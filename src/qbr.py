@@ -26,7 +26,7 @@ class Qbr:
         self.language = (language[0]) if isinstance(language, list) else language
 
     def run(self):
-        state         = webcam.scan()
+        state         = webcam.scan(colorFlag=True)
         if not state:
             print('\033[0;33m[QBR SCAN ERROR] Ops, you did not scan in all 6 sides.')
             print('Please try again.\033[0m')
