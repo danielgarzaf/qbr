@@ -8,6 +8,7 @@
 
 from sys import exit as Die
 try:
+    import json
     import sys
     import cv2
     from colordetection import ColorDetector
@@ -104,24 +105,27 @@ class Webcam:
         state   = [0,0,0,
                    0,0,0,
                    0,0,0]
+
+        # run definer and store colors in a json file
+        if colorFlag:
+            faces_avg_hsv = self.define_colors()
+            with open("colors.json", "w") as json_file:
+                json.dump(faces_avg_hsv, json_file)
+                json_file.close()
+
         while True:
             _, frame = self.cam.read()
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             key = cv2.waitKey(10) & 0xff
-
-            if colorFlag:
-                colorFlag = False
-                faces_avg_hsv = self.define_colors()
-                print(faces_avg_hsv)
-
-            # init certain stickers.
+        
+           # init certain stickers.
             self.draw_main_stickers(frame)
             self.draw_preview_stickers(frame, preview)
 
             for index,(x,y) in enumerate(self.stickers):
                 roi          = hsv[y:y+32, x:x+32]
                 avg_hsv      = ColorDetector.average_hsv(roi)
-                color_name   = ColorDetector.get_color_name(avg_hsv)
+                color_name   = ColorDetector.get_color_name(avg_hsv, colorFlag)
                 state[index] = color_name
 
                 # update when space bar is pressed.
@@ -186,9 +190,6 @@ class Webcam:
                 face = faces[face_index]
                 faces_avg_hsv[face] = avg_hsv
                 face_index += 1
-
-            # show the new stickers
-            # self.draw_current_stickers(frame, state)
 
             # quit on escape.
             if key == 27:

@@ -63,7 +63,7 @@ if __name__ == '__main__':
                     argument which will be the language for the normalization output. \
                     Default is "en".')
     parser.add_argument('-d', '--definer', action='store_true', default=False,
-            help='Call this flag to run the color definer', metavar='')
+            help='Call this flag to run the color definer')
     args = parser.parse_args()
 
     # run Qbr with its arguments.

@@ -9,32 +9,59 @@
 from sys import exit as Die
 try:
     import sys
+    import json
 except ImportError as err:
     Die(err)
 
 class ColorDetection:
 
-    def get_color_name(self, hsv):
+    def get_color_name(self, hsv, colorFlag):
         """ Get the name of the color based on the hue.
 
         :returns: string
         """
         (h,s,v) = hsv
-        #print((h,s,v))
-        if h < 15 and v < 100:
-            return 'red'
-        if h <= 10 and v > 100:
-            return 'orange'
-        elif h <= 30 and s <= 100:
-            return 'white'
-        elif h <= 40:
-            return 'yellow'
-        elif h <= 85:
-            return 'green'
-        elif h <= 130:
-            return 'blue'
 
-        return 'white'
+        if colorFlag:
+            print("custom colors loaded")
+            custom_colors = {}
+            with open("colors.json", "r") as json_file:
+                custom_colors = json.load(json_file)
+                json_file.close()
+            red_hsv = custom_colors["RED"]
+            orange_hsv = custom_colors["ORANGE"]
+            white_hsv = custom_colors["WHITE"]
+            yellow_hsv = custom_colors["YELLOW"]
+            green_hsv = custom_colors["GREEN"]
+            blue_hsv = custom_colors["BLUE"]
+            if h - 10 < red_hsv[0] and red_hsv[0] < h + 10:
+                return 'red'
+            elif h - 10 < orange_hsv[0] and orange_hsv[0] < h + 10:
+                return 'orange'
+            elif h - 10 < white_hsv[0] and white_hsv[0] < h + 10:
+                return 'white'
+            elif h - 10 < yellow_hsv[0] and yellow_hsv[0] < h + 10:
+                return 'yellow'
+            elif h - 10 < green_hsv[0] and green_hsv[0] < h + 10:
+                return 'green'
+            elif h - 10 < blue_hsv[0] and blue_hsv[0] < h + 10:
+                return 'blue'
+            else:
+                return 'white'
+        else:
+            if h < 15 and v < 100:
+                return 'red'
+            elif h <= 10 and v > 100:
+                return 'orange'
+            elif h <= 30 and s <= 100:
+                return 'white'
+            elif h <= 40:
+                return 'yellow'
+            elif h <= 85:
+                return 'green'
+            elif h <= 130:
+                return 'blue'
+            return 'white'
 
     def name_to_rgb(self, name):
         """
