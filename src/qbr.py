@@ -21,13 +21,14 @@ except ImportError as err:
 
 class Qbr:
 
-    def __init__(self, normalize, language, definer):
+    def __init__(self, normalize, language, definer, custom_colors):
         self.humanize = normalize
         self.language = (language[0]) if isinstance(language, list) else language
         self.definer = definer
+        self.custom_colors = custom_colors
 
     def run(self):
-        state = webcam.scan(self.definer)
+        state = webcam.scan(self.definer, self.custom_colors)
         if not state:
             print('\033[0;33m[QBR SCAN ERROR] Oops, you did not scan in all 6 sides.')
             print('Please try again.\033[0m')
@@ -63,12 +64,15 @@ if __name__ == '__main__':
                     argument which will be the language for the normalization output. \
                     Default is "en".')
     parser.add_argument('-d', '--definer', action='store_true', default=False,
-            help='Call this flag to run the color definer')
+            help='Run the color definer. Uses custom colors after scan.')
+    parser.add_argument('-c' '--custom', action='store_true', default=False,
+            help="Use custom colors.", dest='custom')
     args = parser.parse_args()
 
     # run Qbr with its arguments.
     Qbr(
         args.normalize,
         args.language,
-        args.definer
+        args.definer,
+        args.custom
     ).run()
