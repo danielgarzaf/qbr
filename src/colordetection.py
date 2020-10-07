@@ -30,9 +30,8 @@ class ColorDetection:
                 json_file.close()
             euclidean_dst = {}
             point_a = (h,s,v)
-            for key, color_hsv in custom_colors.items():
-                color_h, color_s, color_v = color_hsv
-                point_b = (color_h, color_s, color_v)
+            for key, value in custom_colors.items():
+                point_b = (tuple(value))
                 dst = distance.euclidean(point_a, point_b)
                 euclidean_dst[key] = dst
             color = min(euclidean_dst, key=euclidean_dst.get).lower()
