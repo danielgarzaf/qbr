@@ -10,44 +10,34 @@ from sys import exit as Die
 try:
     import sys
     import json
+    import numpy as np
+    from scipy.spatial import distance
 except ImportError as err:
     Die(err)
 
 class ColorDetection:
 
-    def get_color_name(self, hsv, colorFlag):
+    def get_color_name(self, hsv, definer_flag, custom_flag):
         """ Get the name of the color based on the hue.
 
         :returns: string
         """
         (h,s,v) = hsv
 
-        if colorFlag:
-            print("custom colors loaded")
-            custom_colors = {}
+        if definer_flag or custom_flag:
             with open("colors.json", "r") as json_file:
                 custom_colors = json.load(json_file)
                 json_file.close()
-            red_hsv = custom_colors["RED"]
-            orange_hsv = custom_colors["ORANGE"]
-            white_hsv = custom_colors["WHITE"]
-            yellow_hsv = custom_colors["YELLOW"]
-            green_hsv = custom_colors["GREEN"]
-            blue_hsv = custom_colors["BLUE"]
-            if h - 10 < red_hsv[0] and red_hsv[0] < h + 10:
-                return 'red'
-            elif h - 10 < orange_hsv[0] and orange_hsv[0] < h + 10:
-                return 'orange'
-            elif h - 10 < white_hsv[0] and white_hsv[0] < h + 10:
-                return 'white'
-            elif h - 10 < yellow_hsv[0] and yellow_hsv[0] < h + 10:
-                return 'yellow'
-            elif h - 10 < green_hsv[0] and green_hsv[0] < h + 10:
-                return 'green'
-            elif h - 10 < blue_hsv[0] and blue_hsv[0] < h + 10:
-                return 'blue'
-            else:
-                return 'white'
+            euclidean_dst = {}
+            point_a = (h,s,v)
+            for key, color_hsv in custom_colors.items():
+                color_h, color_s, color_v = color_hsv
+                point_b = (color_h, color_s, color_v)
+                dst = distance.euclidean(point_a, point_b)
+                euclidean_dst[key] = dst
+            color = min(euclidean_dst, key=euclidean_dst.get).lower()
+            return color
+
         else:
             if h < 15 and v < 100:
                 return 'red'
