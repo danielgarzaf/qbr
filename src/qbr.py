@@ -63,7 +63,7 @@ if __name__ == '__main__':
             help='You can pass in a single \
                     argument which will be the language for the normalization output. \
                     Default is "en".')
-    parser.add_argument('-d', '--definer', action='store_true', default=False,
+    parser.add_argument('-d', '--define', action='store_true', default=False,
             help='Run the color definer. Uses custom colors after scan.')
     parser.add_argument('-c' '--custom', action='store_true', default=False,
             help="Use custom colors.", dest='custom')
@@ -73,6 +73,6 @@ if __name__ == '__main__':
     Qbr(
         args.normalize,
         args.language,
-        args.definer,
+        args.define,
         args.custom
     ).run()
