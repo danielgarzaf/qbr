@@ -23,6 +23,7 @@ class Webcam:
         self.stickers         = self.get_sticker_coordinates('main')
         self.current_stickers = self.get_sticker_coordinates('current')
         self.preview_stickers = self.get_sticker_coordinates('preview')
+        self.center_sticker = self.get_sticker_coordinates('center')
 
     def get_sticker_coordinates(self, name):
         """
@@ -48,7 +49,8 @@ class Webcam:
                 [20, 130], [54, 130], [88, 130],
                 [20, 164], [54, 164], [88, 164],
                 [20, 198], [54, 198], [88, 198]
-            ]
+            ],
+            'center' : [300,220]
         }
         return stickers[name]
 
@@ -68,6 +70,11 @@ class Webcam:
         for index,(x,y) in enumerate(self.preview_stickers):
             cv2.rectangle(frame, (x,y), (x+32, y+32), ColorDetector.name_to_rgb(state[index]), -1)
 
+    def draw_center_sticker(self, frame):
+        (x, y) = self.center_sticker
+        cv2.rectangle(frame, (x,y), (x+32, y+32), (255,255,255), 2)
+
+
     def color_to_notation(self, color):
         """
         Return the notation from a specific color.
@@ -86,7 +93,7 @@ class Webcam:
         }
         return notation[color]
 
-    def scan(self, colorFlag=False):
+    def scan(self, definer_flag=False, custom_flag=False):
         """
         Open up the webcam and scans the 9 regions in the center
         and show a preview in the left upper corner.
@@ -107,8 +114,9 @@ class Webcam:
                    0,0,0]
 
         # run definer and store colors in a json file
-        if colorFlag:
+        if definer_flag:
             faces_avg_hsv = self.define_colors()
+            faces_avg_hsv = self.order_custom_colors(faces_avg_hsv)
             with open("colors.json", "w") as json_file:
                 json.dump(faces_avg_hsv, json_file)
                 json_file.close()
@@ -125,7 +133,7 @@ class Webcam:
             for index,(x,y) in enumerate(self.stickers):
                 roi          = hsv[y:y+32, x:x+32]
                 avg_hsv      = ColorDetector.average_hsv(roi)
-                color_name   = ColorDetector.get_color_name(avg_hsv, colorFlag)
+                color_name   = ColorDetector.get_color_name(avg_hsv, definer_flag, custom_flag)
                 state[index] = color_name
 
                 # update when space bar is pressed.
@@ -154,7 +162,6 @@ class Webcam:
         cv2.destroyAllWindows()
         return sides if len(sides) == 6 else False
 
-
     def define_colors(self):
         """
         Scan the center of each face to determine the HSV range of each color.
@@ -167,8 +174,8 @@ class Webcam:
         faces = ["GREEN", "RED", "BLUE",
                  "ORANGE", "YELLOW", "WHITE"]
         face_index = 0
-        current_stickers = [self.stickers[4]]
-        print("Current Stickers:", current_stickers)
+        current_sticker = self.center_sticker
+        print("Current Stickers:", current_sticker)
         faces_avg_hsv = {}
 
         while True:
@@ -177,9 +184,9 @@ class Webcam:
             key = cv2.waitKey(10) & 0xff
 
             # init certain stickers.
-            self.draw_main_stickers(frame)
+            self.draw_center_sticker(frame)
 
-            x,y = current_stickers[0]
+            x,y = current_sticker
             roi = hsv[y:y+32, x:x+32]
             avg_hsv = ColorDetector.average_hsv(roi)
             text = "Scan {} face".format(faces[face_index])
@@ -204,6 +211,14 @@ class Webcam:
             cv2.imshow("default", frame)
 
         return faces_avg_hsv
+
+    def order_custom_colors(self, custom_colors):
+        """
+        Orders the dictionary containing the custom
+        colors scanned in ascending order based on the
+        `h` value.
+        """
+        return {k:v for k,v in sorted(list(custom_colors.items()), key=lambda item: item[1][0])}
 
 
 webcam = Webcam()
