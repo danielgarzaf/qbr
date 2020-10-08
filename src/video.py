@@ -8,9 +8,11 @@
 
 from sys import exit as Die
 try:
-    import json
     import sys
     import cv2
+    import json
+    import numpy as np
+    from time import sleep
     from colordetection import ColorDetector
 except ImportError as err:
     Die(err)
@@ -93,7 +95,7 @@ class Webcam:
         }
         return notation[color]
 
-    def scan(self, definer_flag=False, custom_flag=False):
+    def scan(self, definer_flag=False, custom_flag=False, scaler=60, delay=0):
         """
         Open up the webcam and scans the 9 regions in the center
         and show a preview in the left upper corner.
@@ -123,6 +125,7 @@ class Webcam:
 
         while True:
             _, frame = self.cam.read()
+            intensity_matrix = np.ones(frame.shape, np.uint8) * scaler
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             key = cv2.waitKey(10) & 0xff
         
@@ -156,7 +159,9 @@ class Webcam:
                 break
 
             # show result
+            frame = cv2.subtract(frame, intensity_matrix)
             cv2.imshow("default", frame)
+            sleep(delay)
 
         self.cam.release()
         cv2.destroyAllWindows()
