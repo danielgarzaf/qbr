@@ -21,14 +21,16 @@ except ImportError as err:
 
 class Qbr:
 
-    def __init__(self, normalize, language, definer, custom_colors):
+    def __init__(self, normalize, language, definer, custom_colors, scaler, delay):
         self.humanize = normalize
         self.language = (language[0]) if isinstance(language, list) else language
         self.definer = definer
         self.custom_colors = custom_colors
+        self.scaler = int(scaler)
+        self.delay = int(delay)
 
     def run(self):
-        state = webcam.scan(self.definer, self.custom_colors)
+        state = webcam.scan(self.definer, self.custom_colors, self.scaler, self.delay)
         if not state:
             print('\033[0;33m[QBR SCAN ERROR] Oops, you did not scan in all 6 sides.')
             print('Please try again.\033[0m')
@@ -65,8 +67,14 @@ if __name__ == '__main__':
                     Default is "en".')
     parser.add_argument('-d', '--define', action='store_true', default=False,
             help='Run the color definer. Uses custom colors after scan.')
-    parser.add_argument('-c' '--custom', action='store_true', default=False,
-            help="Use custom colors.", dest='custom')
+    parser.add_argument('-c', '--custom', action='store_true', default=False,
+            help="Use custom colors.")
+    parser.add_argument('-s', '--scaler', default = 0, 
+            help="Values from 0 to 255 that determine how much the image \
+                darkens. Defaults at 0")
+    parser.add_argument('-D', '--delay', default=0,
+            help='Determines how many seconds of delay there is between \
+                each frame. Defaults at 0')
     args = parser.parse_args()
 
     # run Qbr with its arguments.
@@ -74,5 +82,7 @@ if __name__ == '__main__':
         args.normalize,
         args.language,
         args.define,
-        args.custom
+        args.custom,
+        args.scaler,
+        args.delay
     ).run()
