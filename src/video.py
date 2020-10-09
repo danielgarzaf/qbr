@@ -8,24 +8,25 @@
 
 from sys import exit as Die
 try:
+    import os
     import sys
     import cv2
     import json
     import numpy as np
-    from time import sleep
     from colordetection import ColorDetector
+    from filters import Filter
+    from time import sleep
+
 except ImportError as err:
     Die(err)
 
 
 class Webcam:
-
     def __init__(self):
         self.cam              = cv2.VideoCapture(0)
         self.stickers         = self.get_sticker_coordinates('main')
         self.current_stickers = self.get_sticker_coordinates('current')
         self.preview_stickers = self.get_sticker_coordinates('preview')
-        self.center_sticker = self.get_sticker_coordinates('center')
 
     def get_sticker_coordinates(self, name):
         """
@@ -52,10 +53,8 @@ class Webcam:
                 [20, 164], [54, 164], [88, 164],
                 [20, 198], [54, 198], [88, 198]
             ],
-            'center' : [300,220]
         }
         return stickers[name]
-
 
     def draw_main_stickers(self, frame):
         """Draws the 9 stickers in the frame."""
@@ -76,7 +75,6 @@ class Webcam:
         (x, y) = self.center_sticker
         cv2.rectangle(frame, (x,y), (x+32, y+32), (255,255,255), 2)
 
-
     def color_to_notation(self, color):
         """
         Return the notation from a specific color.
@@ -95,7 +93,7 @@ class Webcam:
         }
         return notation[color]
 
-    def scan(self, definer_flag=False, custom_flag=False, scaler=60, delay=0):
+    def scan(self):
         """
         Open up the webcam and scans the 9 regions in the center
         and show a preview in the left upper corner.
@@ -115,28 +113,19 @@ class Webcam:
                    0,0,0,
                    0,0,0]
 
-        # run definer and store colors in a json file
-        if definer_flag:
-            faces_avg_hsv = self.define_colors()
-            faces_avg_hsv = self.order_custom_colors(faces_avg_hsv)
-            with open("colors.json", "w") as json_file:
-                json.dump(faces_avg_hsv, json_file)
-                json_file.close()
-
         while True:
             _, frame = self.cam.read()
-            intensity_matrix = np.ones(frame.shape, np.uint8) * scaler
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             key = cv2.waitKey(10) & 0xff
         
-           # init certain stickers.
+            # init certain stickers.
             self.draw_main_stickers(frame)
             self.draw_preview_stickers(frame, preview)
 
             for index,(x,y) in enumerate(self.stickers):
                 roi          = hsv[y:y+32, x:x+32]
                 avg_hsv      = ColorDetector.average_hsv(roi)
-                color_name   = ColorDetector.get_color_name(avg_hsv, definer_flag, custom_flag)
+                color_name   = ColorDetector.get_color_name(avg_hsv)
                 state[index] = color_name
 
                 # update when space bar is pressed.
@@ -157,73 +146,128 @@ class Webcam:
             # quit on escape.
             if key == 27:
                 break
+            
+            # start calibration if 'c' is pressed
+            if key == 99:
+                Calibrator().calibrate()
+                self.cam = cv2.VideoCapture(0)
+                _, frame = self.cam.read()
 
-            # show result
-            frame = cv2.subtract(frame, intensity_matrix)
             cv2.imshow("default", frame)
-            sleep(delay)
 
         self.cam.release()
         cv2.destroyAllWindows()
         return sides if len(sides) == 6 else False
 
-    def define_colors(self):
-        """
-        Scan the center of each face to determine the HSV range of each color.
-        Returns the average hsv scanned for each color.
-        """
 
-        preview = ['white','white','white',
-                   'white','white','white',
-                   'white','white','white']
-        faces = ["GREEN", "RED", "BLUE",
-                 "ORANGE", "YELLOW", "WHITE"]
-        face_index = 0
-        current_sticker = self.center_sticker
-        print("Current Stickers:", current_sticker)
-        faces_avg_hsv = {}
+class Calibrator(Webcam):
+    def __init__(self):
+        super().__init__()
+        self.check_colors_file()
+        self.colors_hsv = {}
+        with open("colors.json", "r") as json_file:
+            self.colors_hsv = json.load(json_file)
+        self.colors = list(self.colors_hsv.keys())
+        self.color_idx = 0
+        self.color = self.colors[self.color_idx]
+
+    def calibrate(self):
+        # create trackbars for hsv bounds
+        color = self.colors[self.color_idx]
+        cv2.createTrackbar('lowH', 'default', self.colors_hsv[self.color][0][0], 
+            180, self.callback)
+        cv2.createTrackbar('highH', 'default', self.colors_hsv[self.color][0][1], 
+            180, self.callback)
+        cv2.createTrackbar('lowS', 'default', self.colors_hsv[self.color][1][0], 
+            255, self.callback)
+        cv2.createTrackbar('highS', 'default', self.colors_hsv[self.color][1][1], 
+            255, self.callback)
+        cv2.createTrackbar('lowV', 'default', self.colors_hsv[self.color][2][0],
+            255, self.callback)
+        cv2.createTrackbar('highV', 'default', self.colors_hsv[self.color][2][1], 
+            255, self.callback)
 
         while True:
+            # read frame, key press, and draw stickers
             _, frame = self.cam.read()
+            k = cv2.waitKey(1) & 0xFF
+            self.draw_main_stickers(frame)
+
+            # extract hsv bounds from trackbars
+            lowH = cv2.getTrackbarPos('lowH', 'default')
+            highH = cv2.getTrackbarPos('highH','default')
+            lowS = cv2.getTrackbarPos('lowS', 'default')
+            highS = cv2.getTrackbarPos('highS','default')
+            lowV = cv2.getTrackbarPos('lowV', 'default')
+            highV = cv2.getTrackbarPos('highV','default')
+            low_hsv = np.array([lowH, lowS, lowV])
+            high_hsv = np.array([highH, highS, highV])
+
+            # apply mask
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            key = cv2.waitKey(10) & 0xff
+            mask = cv2.inRange(hsv, low_hsv, high_hsv)
+            frame = cv2.bitwise_and(frame, frame, mask=mask)
 
-            # init certain stickers.
-            self.draw_center_sticker(frame)
+            text = 'Calibrating {} ({}/{})'.format(self.colors[self.color_idx].upper(), 
+                                        self.color_idx + 1, len(self.colors))
+            cv2.putText(frame, text, (20, 460), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 
+                1, cv2.LINE_AA)
 
-            x,y = current_sticker
-            roi = hsv[y:y+32, x:x+32]
-            avg_hsv = ColorDetector.average_hsv(roi)
-            text = "Scan {} face".format(faces[face_index])
-            cv2.putText(frame, text, (20, 460), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 1, cv2.LINE_AA)
+            # press spacebar: move on to next color config
+            if k == 32:
+                self.color = self.colors[self.color_idx]
+                self.colors_hsv[self.color] = ((lowH, highH), (lowS, highS), (lowV, highV))
+                self.color_idx += 1
 
-            # update when space bar is pressed.
-            if key == 32:
-                face = faces[face_index]
-                faces_avg_hsv[face] = avg_hsv
-                face_index += 1
-
-            # quit on escape.
-            if key == 27:
+                if self.color_idx < len(self.colors):
+                    self.color = self.colors[self.color_idx]
+                    self.set_trackbar_positions()
+            
+            # press esc OR last color calibrated: finish calibration process
+            if k == 27 or self.color_idx == len(self.color):
+                cv2.destroyAllWindows()
+                self.color_idx = 0
                 break
+            
+            # press backspace: go back to previous hsv config.
+            if k == 8:
+                self.color_idx -= 1
+                if self.color_idx < 0:
+                    cv2.destroyAllWindows()
+                    self.color_idx = 0
+                    break
+                self.color = self.colors[self.color_idx]
+                self.set_trackbar_positions()
+    
+            cv2.imshow('default', frame)
+        
+        with open('colors.json', 'w') as json_file:
+            json.dump(self.colors_hsv, json_file)
+        
+        # self.cam.release()
 
-            # quit when all faces have been scanned
-            elif face_index == 6:
-                face_index = 0
-                break
+    def check_colors_file(self):
+        if not os.path.isfile('./colors.json'):
+            raise FileNotFoundError("The file \"colors.json\" wasn't found.\n \
+                Create a file named \"colors.json\" and copy and paste this into it:\n \
+                {\n \
+                \"green\": [[0,179],[0,254],[0,254]],\n \
+                \"red\": [[0,179],[0,254],[0,254]],\n \
+                \"blue\": [[0,179],[0,254],[0,254]],\n \
+                \"orange\": [[0,179],[0,254],[0,254]],\n \
+                \"white\": [[0,179],[0,254],[0,254]],\n \
+                \"yellow\": [[0,179],[0,254],[0,254]]\n \
+                }")
+    
+    def set_trackbar_positions(self):
+        cv2.setTrackbarPos('lowH', 'default', self.colors_hsv[self.color][0][0])
+        cv2.setTrackbarPos('highH', 'default', self.colors_hsv[self.color][0][1])
+        cv2.setTrackbarPos('lowS', 'default', self.colors_hsv[self.color][1][0])
+        cv2.setTrackbarPos('highS', 'default', self.colors_hsv[self.color][1][1])
+        cv2.setTrackbarPos('lowV', 'default', self.colors_hsv[self.color][2][0])
+        cv2.setTrackbarPos('highV', 'default', self.colors_hsv[self.color][2][1])
 
-            # show result
-            cv2.imshow("default", frame)
 
-        return faces_avg_hsv
+    def callback(self, x):
+        pass
 
-    def order_custom_colors(self, custom_colors):
-        """
-        Orders the dictionary containing the custom
-        colors scanned in ascending order based on the
-        `h` value.
-        """
-        return {k:v for k,v in sorted(list(custom_colors.items()), key=lambda item: item[1][0])}
-
-
-webcam = Webcam()
