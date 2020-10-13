@@ -27,6 +27,7 @@ class Webcam:
         self.stickers         = self.get_sticker_coordinates('main')
         self.current_stickers = self.get_sticker_coordinates('current')
         self.preview_stickers = self.get_sticker_coordinates('preview')
+        self.filter = Filter()
 
     def get_sticker_coordinates(self, name):
         """
@@ -71,10 +72,6 @@ class Webcam:
         for index,(x,y) in enumerate(self.preview_stickers):
             cv2.rectangle(frame, (x,y), (x+32, y+32), ColorDetector.name_to_rgb(state[index]), -1)
 
-    def draw_center_sticker(self, frame):
-        (x, y) = self.center_sticker
-        cv2.rectangle(frame, (x,y), (x+32, y+32), (255,255,255), 2)
-
     def color_to_notation(self, color):
         """
         Return the notation from a specific color.
@@ -117,6 +114,9 @@ class Webcam:
             _, frame = self.cam.read()
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
             key = cv2.waitKey(10) & 0xff
+            B,G,R = cv2.split(frame)
+            # frame = self.filter.equalize_filter(frame, (B,G,R))
+            # frame = self.filter.gamma_filter(frame)
         
             # init certain stickers.
             self.draw_main_stickers(frame)
@@ -124,7 +124,7 @@ class Webcam:
 
             for index,(x,y) in enumerate(self.stickers):
                 roi          = hsv[y:y+32, x:x+32]
-                avg_hsv      = ColorDetector.average_hsv(roi)
+                avg_hsv      = ColorDetector.median_hsv(roi)
                 color_name   = ColorDetector.get_color_name(avg_hsv)
                 state[index] = color_name
 
@@ -187,58 +187,69 @@ class Calibrator(Webcam):
         cv2.createTrackbar('highV', 'default', self.colors_hsv[self.color][2][1], 
             255, self.callback)
 
+
         while True:
             # read frame, key press, and draw stickers
             _, frame = self.cam.read()
             k = cv2.waitKey(1) & 0xFF
-            self.draw_main_stickers(frame)
 
             # extract hsv bounds from trackbars
-            lowH = cv2.getTrackbarPos('lowH', 'default')
-            highH = cv2.getTrackbarPos('highH','default')
-            lowS = cv2.getTrackbarPos('lowS', 'default')
-            highS = cv2.getTrackbarPos('highS','default')
-            lowV = cv2.getTrackbarPos('lowV', 'default')
-            highV = cv2.getTrackbarPos('highV','default')
-            low_hsv = np.array([lowH, lowS, lowV])
-            high_hsv = np.array([highH, highS, highV])
-
-            # apply mask
+            hl = cv2.getTrackbarPos('lowH', 'default')
+            hu = cv2.getTrackbarPos('highH','default')
+            sl = cv2.getTrackbarPos('lowS', 'default')
+            su = cv2.getTrackbarPos('highS','default')
+            vl = cv2.getTrackbarPos('lowV', 'default')
+            vu = cv2.getTrackbarPos('highV','default')
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            mask = cv2.inRange(hsv, low_hsv, high_hsv)
-            frame = cv2.bitwise_and(frame, frame, mask=mask)
-
-            text = 'Calibrating {} ({}/{})'.format(self.colors[self.color_idx].upper(), 
-                                        self.color_idx + 1, len(self.colors))
-            cv2.putText(frame, text, (20, 460), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 
-                1, cv2.LINE_AA)
 
             # press spacebar: move on to next color config
             if k == 32:
                 self.color = self.colors[self.color_idx]
-                self.colors_hsv[self.color] = ((lowH, highH), (lowS, highS), (lowV, highV))
+                self.colors_hsv[self.color] = ((hl, hu), (sl, su), (vl, vu))
                 self.color_idx += 1
 
                 if self.color_idx < len(self.colors):
                     self.color = self.colors[self.color_idx]
                     self.set_trackbar_positions()
             
-            # press esc OR last color calibrated: finish calibration process
-            if k == 27 or self.color_idx == len(self.color):
-                cv2.destroyAllWindows()
-                self.color_idx = 0
-                break
-            
             # press backspace: go back to previous hsv config.
             if k == 8:
                 self.color_idx -= 1
                 if self.color_idx < 0:
                     cv2.destroyAllWindows()
-                    self.color_idx = 0
                     break
                 self.color = self.colors[self.color_idx]
                 self.set_trackbar_positions()
-    
+                
+            # press esc OR last color calibrated: finish calibration process
+            if k == 27 or self.color_idx == len(self.colors):
+                cv2.destroyAllWindows()
+                break
+
+            # # mask the frame depending on the color
+            # if self.colors[self.color_idx] == 'red' or self.colors[self.color_idx] == 'orange':
+            #     lower_hsv = np.array([0,sl,vl])
+            #     upper_hsv = np.array([hl,su,vu])
+            #     mask1 = cv2.inRange(hsv, lower_hsv, upper_hsv)
+            #     lower_hsv = np.array([hu,sl,vl])
+            #     upper_hsv = np.array([179, su, vu])
+            #     mask2 = cv2.inRange(hsv, lower_hsv, upper_hsv)
+            #     mask = cv2.bitwise_or(mask1, mask2)
+            #     frame = cv2.bitwise_and(frame, frame, mask=mask)
+            #     lower_hsv = np.array([hl,sl,vl])
+            #     upper_hsv = np.array([])
+            lower_hsv = np.array([hl,sl,vl])
+            upper_hsv = np.array([hu,su,vu])
+            mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
+            frame = cv2.bitwise_and(frame, frame, mask=mask)
+            
+            # draw text and stickers into frame
+            text = 'Calibrating {} ({}/{})'.format(self.colors[self.color_idx].upper(), 
+                                        self.color_idx + 1, len(self.colors))
+            cv2.putText(frame, text, (20, 460), cv2.FONT_HERSHEY_TRIPLEX, 0.5, (255,255,255), 
+                1, cv2.LINE_AA)
+            self.draw_main_stickers(frame)
+
             cv2.imshow('default', frame)
         
         with open('colors.json', 'w') as json_file:
