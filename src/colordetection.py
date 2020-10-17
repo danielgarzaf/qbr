@@ -30,17 +30,12 @@ class ColorDetection:
 
         for color in colors:
             hsv_bounds = colors_hsv[color]
-            # print(hsv_bounds)
-            # avg_colors_hsv = self.bounds_to_avg(hsv_bounds)
             lowH = hsv_bounds[0][0]
             highH = hsv_bounds[0][1]
             lowS = hsv_bounds[1][0]
             highS = hsv_bounds[1][1]
             lowV = hsv_bounds[2][0]
             highV = hsv_bounds[2][1]
-            # if color == 'red' or color == 'orange':
-            #     if (h < lowH or h > highH) and s in range(lowS, highS) and v in range(lowV, highV):
-            #         return color
             if h in range(lowH, highH) and s in range(lowS, highS) and v in range(lowV, highV):
                 return color
         return 'white'
@@ -107,17 +102,6 @@ class ColorDetection:
                         v.append(chunk[2])
         
         return (int(np.median(h)), int(np.median(s)), int(np.median(v)))
-
-    def bounds_to_avg(self, hsv_bounds):
-        lowH = hsv_bounds[0][0]
-        highH = hsv_bounds[0][1]
-        lowS = hsv_bounds[1][0]
-        highS = hsv_bounds[1][1]
-        lowV = hsv_bounds[2][0]
-        highV = hsv_bounds[2][1]
-        avg_colors_hsv = self.colors_hsv
-        for color in avg_colors_hsv:
-            avg_colors_hsv[color] = [int((highH-lowH)/2), int((highS-lowS)/2), int((highV-lowV)/2)]
-        return avg_colors_hsv
+        
 
 ColorDetector = ColorDetection()

@@ -226,18 +226,7 @@ class Calibrator(Webcam):
                 cv2.destroyAllWindows()
                 break
 
-            # # mask the frame depending on the color
-            # if self.colors[self.color_idx] == 'red' or self.colors[self.color_idx] == 'orange':
-            #     lower_hsv = np.array([0,sl,vl])
-            #     upper_hsv = np.array([hl,su,vu])
-            #     mask1 = cv2.inRange(hsv, lower_hsv, upper_hsv)
-            #     lower_hsv = np.array([hu,sl,vl])
-            #     upper_hsv = np.array([179, su, vu])
-            #     mask2 = cv2.inRange(hsv, lower_hsv, upper_hsv)
-            #     mask = cv2.bitwise_or(mask1, mask2)
-            #     frame = cv2.bitwise_and(frame, frame, mask=mask)
-            #     lower_hsv = np.array([hl,sl,vl])
-            #     upper_hsv = np.array([])
+            # mask the frame depending on the color
             lower_hsv = np.array([hl,sl,vl])
             upper_hsv = np.array([hu,su,vu])
             mask = cv2.inRange(hsv, lower_hsv, upper_hsv)
