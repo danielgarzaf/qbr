@@ -38,7 +38,7 @@ class ColorDetection:
             highV = hsv_bounds[2][1]
             if h in range(lowH, highH) and s in range(lowS, highS) and v in range(lowV, highV):
                 return color
-        return 'white'
+        return 'blue'
 
     def name_to_rgb(self, name):
         """

@@ -124,7 +124,7 @@ class Webcam:
 
             for index,(x,y) in enumerate(self.stickers):
                 roi          = hsv[y:y+32, x:x+32]
-                avg_hsv      = ColorDetector.median_hsv(roi)
+                avg_hsv      = ColorDetector.average_hsv(roi)
                 color_name   = ColorDetector.get_color_name(avg_hsv)
                 state[index] = color_name
 

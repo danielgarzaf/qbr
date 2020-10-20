@@ -49,6 +49,12 @@ class Qbr:
             manual = normalize.algorithm(algorithm, self.language)
             for index, text in enumerate(manual):
                 print('{}. {}'.format(index+1, text))
+
+        with open("scramble.txt", "w") as f:
+            f.write(unsolvedState)
+        with open("solve.txt", "w") as f:
+            f.write(algorithm)
+            
         Die(0)
 
 if __name__ == '__main__':
