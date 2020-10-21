@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# Filename        : filters.py
+# Original Author : Daniel G
+# Created         : Mon, 21 Sep 2020
+# Last Modified   : Thu, 24 Sep 2020
+
 import cv2
 import numpy as np
 
