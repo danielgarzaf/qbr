@@ -7,29 +7,24 @@
 
 import numpy as np
 
+
 class Wrapper:
     def __init__(self):
-        self.scramble = ""
-        with open("txts/scramble.txt", "r") as f:
-            self.scramble = f.read()
+        self.values = {
+            "U": "0",
+            "B": "1",
+            "R": "2",
+            "F": "3",
+            "L": "4",
+            "D": "5",
+        }
 
-    def wrap_results(self):
-        scramble = self.scramble
+    def wrap_results(self, scramble):
         scramble_nums = ""
         for idx, letter in enumerate(scramble):
-            if letter == "U":
-                scramble_nums += "0"
-            elif letter == "B":
-                scramble_nums += "1"
-            elif letter == "R":
-                scramble_nums += "2"
-            elif letter == "F":
-                scramble_nums += "3"
-            elif letter == "L":
-                scramble_nums += "4"
-            elif letter == "D":
-                scramble_nums += "5"
+            scramble_nums += self.values[letter]
         scramble = scramble_nums
+
         # parse each face values
         scramble_parsed = self.parse_nums(scramble)
 
@@ -55,7 +50,10 @@ class Wrapper:
             else:
                 block[:] = np.rot90(block, 1).copy()
 
-        # prepare output var
+        # prepare the result in string, then split it
+        # and swap face values accordingly to be in the order
+        # the manual demands:
+        # (["White", "Blue", "Red", "Green", "Orange", "Yellow"])
         res = ""
         for i in range(len(scramble_matrix)):
             for j in range(len(scramble_matrix[i])):
@@ -71,21 +69,16 @@ class Wrapper:
             res[-3],
         ]
 
+        # remove the center color of each face value
         for i, nums in enumerate(res):
             res[i] = nums[:4] + nums[5:]
 
+        # arrange values accordingly to fit format in manual
         output = ""
         for nums in res:
             output += nums[:3] + nums[4] + nums[-1] + nums[-2] + nums[-3] + nums[3]
 
-        i = 0
-        with open("txts/setState.txt", "w") as f:
-            f.write("{int[48]}\n")
-            for nums in output:
-                for num in nums:
-                    text = f"    [{i}]: {num}\n"
-                    f.write(text)
-                    i += 1
+        return output
 
     # parse each face values
     def parse_nums(self, nums):
@@ -96,3 +89,4 @@ class Wrapper:
             elif i == len(nums) - 1:
                 scramble_parsed.append(nums[i - 8 : i + 1])
         return scramble_parsed
+

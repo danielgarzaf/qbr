@@ -14,12 +14,11 @@ try:
     import argparse
 
     from combiner import combine
-    from cubesim import CubeSim
+    from cubesim import cube
     from normalizer import normalize
     from time import sleep
     from video import Webcam
-    from wrapper import Wrapper
-    
+
 except ImportError as err:
     Die(err)
 
@@ -30,7 +29,9 @@ class Qbr:
         self.language = (language[0]) if isinstance(language, list) else language
 
     def run(self):
-        input('Before proceeding, make sure to open the RubiksCubeSimulator.')
+        input(
+            "Before proceeding, make sure to open the RubiksCubeSimulator.\nPress ENTER to continue."
+        )
         state = webcam.scan()
         if not state:
             print("\033[0;33m[QBR SCAN ERROR] Oops, you did not scan in all 6 sides.")
@@ -62,18 +63,12 @@ class Qbr:
         with open("txts/solve.txt", "w") as f:
             f.write(algorithm)
 
-        # wrap the results for the simulator
-        wrapper = Wrapper()
-        wrapper.wrap_results()
-        print('Results wrapped')
-
         # set the cube state and execute the commands
-        cube = CubeSim()
         cube.set_state()
-        print('Cube state set!')
+        print("Cube state set!")
         sleep(1)
-        cube.execute_moves()
-        print('Executing moves...')
+        cube.run_moves()
+        print("Executing moves...")
 
         Die(0)
 
